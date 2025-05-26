@@ -49,10 +49,10 @@ func (*RootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 	}
 }
 
-func (m *Compression) ZstdCompress(data sobek.Value) sobek.Value {
+func (m *Compression) ZstdCompress(data sobek.Value) (sobek.Value, error) {
 	zw, err := zstd.NewWriter(nil)
 	if err != nil {
-		panic(fmt.Errorf("failed to initialize zstd Writer: %v", err))
+		return sobek.Undefined(), fmt.Errorf("failed to initialize zstd Writer: %v", err)
 	}
 	defer zw.Close()
 
@@ -62,20 +62,20 @@ func (m *Compression) ZstdCompress(data sobek.Value) sobek.Value {
 	d, ok := exported.([]byte)
 
 	if !ok {
-		panic("expecting JS array")
+		return sobek.Undefined(), fmt.Errorf("expected JS array")
 	}
 
 	dst := make([]byte, 0, len(d))
 	dst = zw.EncodeAll(d, dst)
 
-	return rt.ToValue(dst)
+	return rt.ToValue(dst), nil
 }
 
-func (m *Compression) ZstdDecompress(compressed sobek.Value) sobek.Value {
+func (m *Compression) ZstdDecompress(compressed sobek.Value) (sobek.Value, error) {
 	zw, err := zstd.NewReader(nil)
 
 	if err != nil {
-		panic(fmt.Errorf("failed to initialize zstd Reader: %v", err))
+		return sobek.Undefined(), fmt.Errorf("failed to initialize zstd Reader: %v", err)
 	}
 
 	defer zw.Close()
@@ -84,16 +84,16 @@ func (m *Compression) ZstdDecompress(compressed sobek.Value) sobek.Value {
 	data, ok := exported.([]byte)
 
 	if !ok {
-		panic("expecting JS array")
+		return sobek.Undefined(), fmt.Errorf("expected JS array")
 	}
 
 	out, decodeErr := zw.DecodeAll(data, nil)
 	if decodeErr != nil {
-		panic(fmt.Errorf("failed to decode data: %v", decodeErr))
+		return sobek.Undefined(), fmt.Errorf("failed to decode data: %v", decodeErr)
 	}
 
 	rt := m.vu.Runtime()
-	return rt.ToValue(out)
+	return rt.ToValue(out), nil
 }
 
 // Exports implements the modules.Instance interface and returns the exported types for the JS module.
