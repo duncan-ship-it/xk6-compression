@@ -49,7 +49,7 @@ func (*RootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 	}
 }
 
-func (m *Compression) zstdCompress(data []byte) sobek.Value {
+func (m *Compression) ZstdCompress(data []byte) sobek.Value {
 	zw, err := zstd.NewWriter(nil)
 
 	if err != nil {
@@ -65,7 +65,7 @@ func (m *Compression) zstdCompress(data []byte) sobek.Value {
 	return rt.ToValue(dst)
 }
 
-func (m *Compression) zstdDecompress(compressed []byte) sobek.Value {
+func (m *Compression) ZstdDecompress(compressed []byte) sobek.Value {
 	zw, err := zstd.NewReader(nil)
 
 	if err != nil {
