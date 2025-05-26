@@ -49,23 +49,29 @@ func (*RootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 	}
 }
 
-func (m *Compression) ZstdCompress(data []byte) sobek.Value {
+func (m *Compression) ZstdCompress(data sobek.Value) sobek.Value {
 	zw, err := zstd.NewWriter(nil)
-
 	if err != nil {
 		panic(fmt.Errorf("failed to initialize zstd Writer: %v", err))
 	}
-
 	defer zw.Close()
 
-	dst := make([]byte, 0, len(data))
-	dst = zw.EncodeAll(data, dst)
-
 	rt := m.vu.Runtime()
+
+	exported := data.Export()
+	d, ok := exported.([]byte)
+
+	if !ok {
+		panic("expecting JS array")
+	}
+
+	dst := make([]byte, 0, len(d))
+	dst = zw.EncodeAll(d, dst)
+
 	return rt.ToValue(dst)
 }
 
-func (m *Compression) ZstdDecompress(compressed []byte) sobek.Value {
+func (m *Compression) ZstdDecompress(compressed sobek.Value) sobek.Value {
 	zw, err := zstd.NewReader(nil)
 
 	if err != nil {
@@ -74,7 +80,14 @@ func (m *Compression) ZstdDecompress(compressed []byte) sobek.Value {
 
 	defer zw.Close()
 
-	out, decodeErr := zw.DecodeAll(compressed, nil)
+	exported := compressed.Export()
+	data, ok := exported.([]byte)
+
+	if !ok {
+		panic("expecting JS array")
+	}
+
+	out, decodeErr := zw.DecodeAll(data, nil)
 	if decodeErr != nil {
 		panic(fmt.Errorf("failed to decode data: %v", decodeErr))
 	}
