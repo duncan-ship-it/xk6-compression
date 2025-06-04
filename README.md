@@ -1,4 +1,7 @@
 # xk6-compression
 
-A wrapper around github.com/klauspost/compress
+Compression tools for k6.
 
+Supported compression algorithms:
+
+- Zstandard
