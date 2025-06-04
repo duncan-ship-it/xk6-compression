@@ -5,6 +5,7 @@ import (
 
 	"github.com/grafana/sobek"
 	"github.com/klauspost/compress/zstd"
+	"go.k6.io/k6/js/common"
 	"go.k6.io/k6/js/modules"
 )
 
@@ -50,49 +51,38 @@ func (*RootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 }
 
 func (m *Compression) ZstdCompress(data sobek.Value) sobek.Value {
+	rt := m.vu.Runtime()
+
 	zw, err := zstd.NewWriter(nil)
 	if err != nil {
-		panic(fmt.Errorf("failed to initialize zstd Writer: %v", err))
+		common.Throw(rt, fmt.Errorf("failed to initialize zstd Writer: %v", err))
 	}
 	defer zw.Close()
 
-	rt := m.vu.Runtime()
-
-	exported := data.Export()
-	d, ok := exported.([]byte)
-
-	if !ok {
-		panic("expecting JS array")
-	}
-
-	dst := make([]byte, 0, len(d))
-	dst = zw.EncodeAll(d, dst)
+	converted := ToNativeBytes(rt, data)
+	//dst := make([]byte, 0, len(converted))
+	dst := zw.EncodeAll(converted, nil)
 
 	return rt.ToValue(dst)
 }
 
 func (m *Compression) ZstdDecompress(compressed sobek.Value) sobek.Value {
+	rt := m.vu.Runtime()
+
 	zw, err := zstd.NewReader(nil)
-
 	if err != nil {
-		panic(fmt.Errorf("failed to initialize zstd Reader: %v", err))
+		common.Throw(rt, fmt.Errorf("failed to initialize zstd Reader: %v", err))
 	}
-
 	defer zw.Close()
 
-	exported := compressed.Export()
-	data, ok := exported.([]byte)
+	converted := ToNativeBytes(rt, compressed)
 
-	if !ok {
-		panic("expecting JS array")
-	}
+	out, decodeErr := zw.DecodeAll(converted, nil)
 
-	out, decodeErr := zw.DecodeAll(data, nil)
 	if decodeErr != nil {
-		panic(fmt.Errorf("failed to decode data: %v", decodeErr))
+		common.Throw(rt, fmt.Errorf("failed to decode data: %v", decodeErr))
 	}
 
-	rt := m.vu.Runtime()
 	return rt.ToValue(out)
 }
 
